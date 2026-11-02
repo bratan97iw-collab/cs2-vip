@@ -1,3 +1,35 @@
+name: Build AMBuild Plugin
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    env:
+      HL2SDK_ROOT: ${{ github.workspace }}/external
+      MMS_PATH: ${{ github.workspace }}/external/metamod-source
+      MANIFEST_PATH: ${{ github.workspace }}/external/metamod-source/hl2sdk-manifests
+      CC: clang-14
+      CXX: clang++-14
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up build tools
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qy
+          sudo apt-get install -y git clang-14 binutils python3 python3-pip protobuf-compiler zip
           python3 -m pip install --user --upgrade pip importlib-metadata
           python3 -m pip install --user setuptools==45.2.0
           git clone https://github.com/alliedmodders/ambuild.git
