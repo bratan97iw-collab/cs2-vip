@@ -80,6 +80,28 @@ jobs:
           test -s "$SDK/public/tier1/utlmap.h"
           echo "Legacy utlmap.h supplied; further C++ incompatibilities may remain."
 
+      - name: Adapt SchemaEntity schema field layout for S2SDK
+        run: |
+          set -euxo pipefail
+          python3 - <<'PYSCHEMA'
+          from pathlib import Path
+          p = Path.cwd().parent / 'SchemaEntity' / 'schemasystem.cpp'
+          src = p.read_text()
+          replacements = {
+              'm_nStaticMetadataCount': 'm_nNumMetadata',
+              'm_pStaticMetadata': 'm_pMetadata',
+              'm_pszName': 'm_pName',
+              'm_nFieldCount': 'm_nNumFields',
+              'm_nBaseClassCount': 'm_nNumBaseClasses',
+          }
+          for old, new in replacements.items():
+              if old not in src:
+                  raise SystemExit(f'Expected SchemaEntity field is missing: {old}')
+              src = src.replace(old, new)
+          p.write_text(src)
+          print('Updated SchemaEntity schema field names for current S2SDK.')
+          PYSCHEMA
+
       - name: Configure and build plugin
         run: |
           set -euxo pipefail
