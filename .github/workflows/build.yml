@@ -135,6 +135,11 @@ jobs:
           done
           echo "=== SEARCH FOR GENERICHASH ==="
           find "$SDK" -iname '*generichash*' -print
+          echo "=== KHOOK HEADERS ==="
+          KHOOK_INCLUDE="$MMS_PATH/third_party/khook/include"
+          test -f "$KHOOK_INCLUDE/khook.hpp"
+          export CPLUS_INCLUDE_PATH="$KHOOK_INCLUDE${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}"
+          echo "KHook include path: $KHOOK_INCLUDE"
           echo "=== COMPILE ==="
           ambuild
 
