@@ -35,7 +35,8 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           sudo apt-get update -qy
           
-          sudo apt-get install -y git clang-14 binutils
+          
+          sudo apt-get install -y git clang-14 binutils protobuf-compiler
           sudo apt-get install -y python3
           python3 -m pip install --upgrade pip importlib-metadata
           python3 -m pip install setuptools==45.2.0
@@ -46,6 +47,10 @@ jobs:
           mkdir external
           cd external
           git clone --recursive https://github.com/alliedmodders/metamod-source.git
+          mkdir -p hl2sdk-cs2/devtools/bin/linuxsteamrt64
+          ln -s "$(command -v protoc)" hl2sdk-cs2/devtools/bin/linuxsteamrt64/protoc
+          protoc --version
+
           cd metamod-source
           git checkout 170058a
           git submodule update --init --recursive
