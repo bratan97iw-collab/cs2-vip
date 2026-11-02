@@ -16,7 +16,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, '[skip ci]')"
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     env:
       HL2SDK_ROOT: "${{ github.workspace }}/external"
@@ -41,7 +41,11 @@ jobs:
           cd ..
           mkdir external
           cd external
-          git clone --recursive --branch master --single-branch https://github.com/alliedmodders/metamod-source.git
+          git clone --recursive https://github.com/alliedmodders/metamod-source.git
+          cd metamod-source
+          git checkout 170058a
+          git submodule update --init --recursive
+          cd ..
           git clone --recursive --branch cs2 --single-branch https://github.com/alliedmodders/hl2sdk.git hl2sdk-cs2
           cd ../..
           git clone https://github.com/pisex/SchemaEntity.git
@@ -69,7 +73,7 @@ jobs:
     needs: build
     permissions:
       contents: write
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
   
     steps:
       - name: Download build artifact
