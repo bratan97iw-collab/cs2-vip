@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euxo pipefail
           sudo apt-get update -qy
-          sudo apt-get install -y git clang-14 binutils python3 python3-pip protobuf-compiler zip
+          sudo apt-get install -y git curl clang-14 binutils python3 python3-pip protobuf-compiler zip
           python3 -m pip install --user --upgrade pip importlib-metadata
           python3 -m pip install --user setuptools==45.2.0
           git clone https://github.com/alliedmodders/ambuild.git
@@ -66,6 +66,19 @@ jobs:
           # The original project expects SchemaEntity next to the repository.
           cd "$GITHUB_WORKSPACE/.."
           git clone https://github.com/pisex/SchemaEntity.git
+
+      - name: Supply legacy SchemaEntity header (compatibility test)
+        run: |
+          set -euxo pipefail
+          # SchemaEntity includes a header that s2sdk/cs2 no longer ships.
+          # Bring in the original legacy declaration without changing s2sdk source files.
+          SDK="$HL2SDK_ROOT/hl2sdk-cs2"
+          mkdir -p "$SDK/public/tier1"
+          curl --fail --location --show-error --silent \
+            https://raw.githubusercontent.com/alliedmodders/hl2sdk/cs2/public/tier1/utlmap.h \
+            --output "$SDK/public/tier1/utlmap.h"
+          test -s "$SDK/public/tier1/utlmap.h"
+          echo "Legacy utlmap.h supplied; further C++ incompatibilities may remain."
 
       - name: Configure and build plugin
         run: |
