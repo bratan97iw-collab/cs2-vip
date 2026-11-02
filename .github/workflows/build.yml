@@ -165,6 +165,38 @@ jobs:
           print('Removed legacy sh_vector.h and iserver.h headers from VIP Core')
           PYREMOVE
 
+      - name: Port initial engine headers and removed legacy interfaces
+        run: |
+          set -euxo pipefail
+          python3 - <<'PYPORT'
+          from pathlib import Path
+          header = Path('vip.h')
+          src = header.read_text(encoding='utf-8-sig')
+          anchor = '#include <entity2/entitysystem.h>'
+          assert src.count(anchor) == 1, 'Cannot find vip.h include anchor'
+          src = src.replace(anchor, anchor + '\n#include <engine2/ivengineserver2.h>\n#include <game/entitynetworkable.h>', 1)
+          header.write_text(src)
+
+          core = Path('vip.cpp')
+          src = core.read_text(encoding='utf-8-sig')
+          old = 'GET_V_IFACE_ANY(GetServerFactory, g_pSource2GameClients, IServerGameClients, SOURCE2GAMECLIENTS_INTERFACE_VERSION);'
+          assert src.count(old) == 1, 'Unexpected IServerGameClients usage'
+          src = src.replace(old, '// Legacy IServerGameClients interface removed: not used elsewhere in VIP Core', 1)
+          core.write_text(src)
+
+          schema = Path.cwd().parent / 'SchemaEntity'
+          for name, old in (
+              ('CCSPlayerController.h', 'FL_CONTROLLER_FAKECLIENT'),
+              ('CCSPlayerPawn.h', 'FL_PAWN_FAKECLIENT'),
+          ):
+              path = schema / name
+              src = path.read_text(encoding='utf-8-sig')
+              assert src.count(old) == 1, f'Unexpected {old} usage in {name}'
+              src = src.replace(old, 'FL_FAKECLIENT', 1)
+              path.write_text(src)
+          print('Applied initial engine API compile compatibility changes')
+          PYPORT
+
       - name: Inspect engine interface migration
         run: |
           set -euo pipefail
