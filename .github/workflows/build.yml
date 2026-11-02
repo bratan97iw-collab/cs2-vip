@@ -102,6 +102,34 @@ jobs:
           print('Updated SchemaEntity schema field names for current S2SDK.')
           PYSCHEMA
 
+      - name: Adapt legacy SchemaEntity types for S2SDK
+        run: |
+          set -euxo pipefail
+          python3 - <<'PYTYPES'
+          from pathlib import Path
+          root = Path.cwd().parent / 'SchemaEntity'
+          globaltypes = root / 'globaltypes.h'
+          contents = globaltypes.read_text()
+          # Types are defined by current S2SDK; use the real declarations.
+          if '#include <mathlib/ray.h>' not in contents:
+              contents = contents.replace('#include <platform.h>', '#include <platform.h>\n#include <mathlib/ray.h>\n#include <gametrace.h>', 1)
+          globaltypes.write_text(contents)
+
+          damage = root / 'ctakedamageinfo.h'
+          contents = damage.read_text()
+          if '#include <gametrace.h>' not in contents:
+              contents = contents.replace('#include <platform.h>', '#include <platform.h>\n#include <gametrace.h>', 1)
+          damage.write_text(contents)
+
+          schema = root / 'schemasystem.cpp'
+          contents = schema.read_text()
+          if 'NetworkStateChanged_t' not in contents:
+              raise SystemExit('SchemaEntity source changed; refusing to patch unknown version')
+          contents = contents.replace('NetworkStateChanged_t', 'NetworkStateChangedData')
+          schema.write_text(contents)
+          print('Applied verified S2SDK type references to local SchemaEntity checkout')
+          PYTYPES
+
       - name: Inspect S2SDK API compatibility
         run: |
           set -euxo pipefail
