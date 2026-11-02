@@ -156,8 +156,13 @@ jobs:
           line = '#include <sh_vector.h>'
           if src.count(line) != 1:
               raise SystemExit('Expected legacy include not found exactly once in vip.h')
-          header.write_text(src.replace(line, '// Legacy sh_vector.h removed: no SourceHook::CVector usage in VIP sources', 1))
-          print('Removed unused legacy SourceHook vector header from VIP Core')
+          src = src.replace(line, '// Legacy sh_vector.h removed: no SourceHook::CVector usage in VIP sources', 1)
+          legacy_server = '#include <iserver.h>'
+          if src.count(legacy_server) != 1:
+              raise SystemExit('Expected legacy iserver.h include not found exactly once in vip.h')
+          src = src.replace(legacy_server, '// Legacy iserver.h removed: IServerListener is declared in include/utils.h', 1)
+          header.write_text(src)
+          print('Removed legacy sh_vector.h and iserver.h headers from VIP Core')
           PYREMOVE
 
       - name: Configure and build plugin
