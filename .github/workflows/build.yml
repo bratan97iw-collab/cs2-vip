@@ -146,6 +146,20 @@ jobs:
           sed -n '195,235p' "$GITHUB_WORKSPACE/../SchemaEntity/schemasystem.cpp"
           sed -n '305,370p' "$GITHUB_WORKSPACE/../SchemaEntity/globaltypes.h"
 
+      - name: Remove unused legacy SourceHook vector include
+        run: |
+          set -euxo pipefail
+          python3 - <<'PYREMOVE'
+          from pathlib import Path
+          header = Path('vip.h')
+          src = header.read_text()
+          line = '#include <sh_vector.h>'
+          if src.count(line) != 1:
+              raise SystemExit('Expected legacy include not found exactly once in vip.h')
+          header.write_text(src.replace(line, '// Legacy sh_vector.h removed: no SourceHook::CVector usage in VIP sources', 1))
+          print('Removed unused legacy SourceHook vector header from VIP Core')
+          PYREMOVE
+
       - name: Configure and build plugin
         run: |
           set -euxo pipefail
