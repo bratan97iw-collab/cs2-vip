@@ -165,6 +165,20 @@ jobs:
           print('Removed legacy sh_vector.h and iserver.h headers from VIP Core')
           PYREMOVE
 
+      - name: Inspect engine interface migration
+        run: |
+          set -euo pipefail
+          SDK="$HL2SDK_ROOT/hl2sdk-cs2"
+          echo '=== Engine header candidates ==='
+          find "$SDK/public" -iname '*iserver*' -o -iname '*engine*server*' -o -iname '*gameclient*' | head -60
+          echo '=== Definitions and interface versions ==='
+          grep -RnsE 'class IVEngineServer2|class IServerGameClients|SOURCE2GAMECLIENTS_INTERFACE_VERSION|FL_PAWN_FAKECLIENT|FL_CONTROLLER_FAKECLIENT|Entity2Networkable_t|IEntity2Networkables' "$SDK/public" --include='*.h' | head -100 || true
+          echo '=== Relevant source includes ==='
+          sed -n '1,70p' vip.h
+          sed -n '1,65p' vip.cpp
+          echo '=== Flag usages ==='
+          grep -nE 'FL_PAWN_FAKECLIENT|FL_CONTROLLER_FAKECLIENT|FL_FAKECLIENT' "$GITHUB_WORKSPACE/../SchemaEntity/CCSPlayerController.h" "$GITHUB_WORKSPACE/../SchemaEntity/CBasePlayerPawn.h" || true
+
       - name: Configure and build plugin
         run: |
           set -euxo pipefail
