@@ -47,12 +47,19 @@ jobs:
           git submodule update --init --recursive
           cd ..
           git clone --recursive --branch cs2 --single-branch https://github.com/alliedmodders/s2sdk.git hl2sdk-cs2
-          # Fail clearly if the legacy AMBuild script expects files missing from s2sdk.
-          if [ ! -f hl2sdk-cs2/thirdparty/game_protobufs/csgo/source2_steam_stats.proto ]; then
-            echo "ERROR: Legacy AMBuildScript expects source2_steam_stats.proto at a path missing from s2sdk."
-            find hl2sdk-cs2 -name source2_steam_stats.proto -print
-            exit 1
-          fi
+          # The legacy VIP AMBuilder expects proto files in the old csgo folder.
+          # Modern s2sdk stores those files under common/. Bridge only the
+          # expected directory instead of copying files or modifying s2sdk.
+          test -f hl2sdk-cs2/common/source2_steam_stats.proto
+          mkdir -p hl2sdk-cs2/thirdparty/game_protobufs
+          ln -s "$(pwd)/hl2sdk-cs2/common" hl2sdk-cs2/thirdparty/game_protobufs/csgo
+          for name in valveextensions network_connection networkbasetypes netmessages source2_steam_stats; do
+            if [ ! -f "hl2sdk-cs2/thirdparty/game_protobufs/csgo/${name}.proto" ]; then
+              echo "Missing proto: ${name}.proto"
+              find hl2sdk-cs2 -name "${name}.proto" -print
+              exit 1
+            fi
+          done
           mkdir -p hl2sdk-cs2/devtools/bin/linuxsteamrt64
           ln -sf "$(command -v protoc)" hl2sdk-cs2/devtools/bin/linuxsteamrt64/protoc
           protoc --version
