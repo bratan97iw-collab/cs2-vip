@@ -1,6 +1,5 @@
 name: Build AMBuild Plugin
 
-
 on:
   push:
     branches:
@@ -9,105 +8,71 @@ on:
   pull_request:
     branches:
       - main
-  release:
-    types:
-      - created
-
 
 jobs:
   build:
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
-    permissions:
-      contents: write
     runs-on: ubuntu-22.04
-
+    permissions:
+      contents: read
     env:
-      HL2SDK_ROOT: "${{ github.workspace }}/external"
-      MMS_PATH: "${{ github.workspace }}/external/metamod-source"
-      MANIFEST_PATH: "${{ github.workspace }}/external/metamod-source/hl2sdk-manifests"
+      HL2SDK_ROOT: ${{ github.workspace }}/external
+      MMS_PATH: ${{ github.workspace }}/external/metamod-source
+      MANIFEST_PATH: ${{ github.workspace }}/external/metamod-source/hl2sdk-manifests
+      CC: clang-14
+      CXX: clang++-14
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up dependencies
+      - name: Set up build tools
         run: |
-          export DEBIAN_FRONTEND=noninteractive
+          set -euxo pipefail
           sudo apt-get update -qy
-          
-          
-          sudo apt-get install -y git clang-14 binutils protobuf-compiler
-          sudo apt-get install -y python3
-          python3 -m pip install --upgrade pip importlib-metadata
-          python3 -m pip install setuptools==45.2.0
+          sudo apt-get install -y git clang-14 binutils python3 python3-pip protobuf-compiler zip
+          python3 -m pip install --user --upgrade pip importlib-metadata
+          python3 -m pip install --user setuptools==45.2.0
           git clone https://github.com/alliedmodders/ambuild.git
-          cd ambuild
-          pip install .
-          cd ..
-          mkdir external
+          python3 -m pip install --user ./ambuild
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Fetch Metamod 1483 and HL2SDK
+        run: |
+          set -euxo pipefail
+          mkdir -p external
           cd external
           git clone --recursive https://github.com/alliedmodders/metamod-source.git
-          mkdir -p hl2sdk-cs2/devtools/bin/linuxsteamrt64
-          ln -s "$(command -v protoc)" hl2sdk-cs2/devtools/bin/linuxsteamrt64/protoc
-          protoc --version
-
           cd metamod-source
           git checkout 170058a
           git submodule update --init --recursive
           cd ..
-          
-          if [ ! -d hl2sdk-cs2/.git ]; then
           git clone --recursive --branch cs2 --single-branch https://github.com/alliedmodders/hl2sdk.git hl2sdk-cs2
-          fi
-
           mkdir -p hl2sdk-cs2/devtools/bin/linuxsteamrt64
           ln -sf "$(command -v protoc)" hl2sdk-cs2/devtools/bin/linuxsteamrt64/protoc
           protoc --version
-
-          cd ../..
+          # The original project expects SchemaEntity next to the repository.
+          cd "$GITHUB_WORKSPACE/.."
           git clone https://github.com/pisex/SchemaEntity.git
-          cd ${{ github.workspace }}
-          
+
       - name: Configure and build plugin
         run: |
-          mkdir build
+          set -euxo pipefail
+          mkdir -p build
           cd build
-          python3 ../configure.py -s cs2 --targets x86_64 --enable-optimize --hl2sdk-manifests=./hl2sdk-manifests --mms_path=$MMS_PATH --hl2sdk-root=$HL2SDK_ROOT
+          python3 ../configure.py -s cs2 --targets x86_64 --enable-optimize \
+            --hl2sdk-manifests="$MANIFEST_PATH" \
+            --mms_path="$MMS_PATH" --hl2sdk-root="$HL2SDK_ROOT"
           ambuild
 
       - name: Create archive
         run: |
+          set -euxo pipefail
           cd build/package
-          zip -r ${{ github.workspace }}.zip addons
+          zip -r "$GITHUB_WORKSPACE/vip-linux.zip" addons
 
-      - name: Upload archive to artifact
+      - name: Upload archive
         uses: actions/upload-artifact@v4
         with:
-          name: compile
-          path: ${{ github.workspace }}.zip
-
-  release:
-    needs: build
-    permissions:
-      contents: write
-    runs-on: ubuntu-22.04
-  
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: compile
-          path: .
-  
-      - name: List files in directory
-        run: ls -la
-  
-      - name: Find downloaded artifact
-        id: find_artifact
-        run: echo "ARTIFACT=$(ls | grep '\.zip$')" >> $GITHUB_ENV
-  
-      - name: Upload release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.head_commit.message }}
-          files: ${{ env.ARTIFACT }}
+          name: vip-linux-metamod1483
+          path: vip-linux.zip
+          if-no-files-found: error
