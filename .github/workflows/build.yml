@@ -102,6 +102,22 @@ jobs:
           print('Updated SchemaEntity schema field names for current S2SDK.')
           PYSCHEMA
 
+      - name: Inspect S2SDK API compatibility
+        run: |
+          set -euxo pipefail
+          SDK="$HL2SDK_ROOT/hl2sdk-cs2"
+          echo "=== NetworkStateChangedData definition ==="
+          sed -n '25,110p' "$SDK/public/entity2/entityinstance.h"
+          echo "=== Current S2SDK type declarations ==="
+          for type in 'Ray_t' 'RayType_t' 'CHitBox' 'HitGroup_t' 'NetworkStateChangedData'; do
+            echo "=== $type ==="
+            grep -RnE "(struct|class|enum|typedef|using)[[:space:]]+${type}\b|${type}[[:space:]]*\(" \
+              "$SDK/public" "$SDK/common" --include='*.h' | head -25 || true
+          done
+          echo "=== Legacy SchemaEntity call sites ==="
+          sed -n '195,235p' "$GITHUB_WORKSPACE/../SchemaEntity/schemasystem.cpp"
+          sed -n '305,370p' "$GITHUB_WORKSPACE/../SchemaEntity/globaltypes.h"
+
       - name: Configure and build plugin
         run: |
           set -euxo pipefail
