@@ -55,7 +55,15 @@ jobs:
           git checkout 170058a
           git submodule update --init --recursive
           cd ..
+          
+          if [ ! -d hl2sdk-cs2/.git ]; then
           git clone --recursive --branch cs2 --single-branch https://github.com/alliedmodders/hl2sdk.git hl2sdk-cs2
+          fi
+
+          mkdir -p hl2sdk-cs2/devtools/bin/linuxsteamrt64
+          ln -sf "$(command -v protoc)" hl2sdk-cs2/devtools/bin/linuxsteamrt64/protoc
+          protoc --version
+
           cd ../..
           git clone https://github.com/pisex/SchemaEntity.git
           cd ${{ github.workspace }}
