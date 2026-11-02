@@ -46,7 +46,13 @@ jobs:
           git checkout 170058a
           git submodule update --init --recursive
           cd ..
-          git clone --recursive --branch cs2 --single-branch https://github.com/alliedmodders/hl2sdk.git hl2sdk-cs2
+          git clone --recursive --branch cs2 --single-branch https://github.com/alliedmodders/s2sdk.git hl2sdk-cs2
+          # Fail clearly if the legacy AMBuild script expects files missing from s2sdk.
+          if [ ! -f hl2sdk-cs2/thirdparty/game_protobufs/csgo/source2_steam_stats.proto ]; then
+            echo "ERROR: Legacy AMBuildScript expects source2_steam_stats.proto at a path missing from s2sdk."
+            find hl2sdk-cs2 -name source2_steam_stats.proto -print
+            exit 1
+          fi
           mkdir -p hl2sdk-cs2/devtools/bin/linuxsteamrt64
           ln -sf "$(command -v protoc)" hl2sdk-cs2/devtools/bin/linuxsteamrt64/protoc
           protoc --version
